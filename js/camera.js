@@ -1,4 +1,4 @@
-<script>
+
   /**
  * camera.js — WFH System Camera Module
  * ─────────────────────────────────────
@@ -345,4 +345,4 @@ const Camera = (() => {
     onRetake:  null,   // (slot) => void
   };
 })();
-</script>
+
