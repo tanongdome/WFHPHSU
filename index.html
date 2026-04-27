@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#26A69A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>WFH SYSTEM | ระบบลงเวลาปฏิบัติงาน</title>
+
+  <!-- ─── Fonts & Icons ─────────────────────────────────── -->
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+
+  <!-- ─── Libraries ────────────────────────────────────── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <!-- ─── GAS Endpoint (แก้ตรงนี้จุดเดียว) ─────────────── -->
+  <script>
+    window.GAS_URL = 'https://script.google.com/macros/s/AKfycbzeiLiAXRN2WBGxxczwXm1frdj1x7BOCNoNd9RUE98zMWVWiA16B3kaYwNimHC6xSlz/exec';
+  </script>
+
+  <style>
+    /* ══════════════════════════════════════════════════════
+       CSS VARIABLES
+       ══════════════════════════════════════════════════════ */
+    :root {
+      --bg:       #FFFDE7;
+      --bg3:      #f8f9fa;
+      --surface:  #f1f5f9;
+      --surface2: #e9eef4;
+      --border:   rgba(174,198,207,.4);
+      --border-s: rgba(174,198,207,.7);
+      --teal:    #26A69A; --teal-d: #00796B; --teal-l: #4DB6AC;
+      --green:   #AED581; --green-d: #558B2F;
+      --yellow:  #FFCA28;
+      --orange:  #FF8A65; --orange-d: #E64A19;
+      --red:     #EF5350; --red-d: #C62828;
+      --purple:  #4A2C6D;
+      --blue:    #0288D1;
+      --text:    #546E7A;
+      --text2:   #78909C;
+      --text3:   #90A4AE;
+      --sh-sm:   0 2px  8px rgba(0,0,0,.06);
+      --sh-md:   0 4px 16px rgba(0,0,0,.08);
+      --sh-lg:   0 8px 32px rgba(0,0,0,.10);
+      --sidebar-w: 240px;
+      --radius:    14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-thumb { background: #AEC6CF; border-radius: 4px; }
+
+    /* ── LINE BROWSER BANNER ──────────────────────────── */
+    #lineBanner { display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,.75); align-items:center; justify-content:center; padding:20px; }
+    #lineBanner.show { display:flex; }
+    .line-banner-box { background:white; border-radius:20px; padding:28px 24px; max-width:360px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+    .line-banner-icon { font-size:48px; margin-bottom:14px; }
+    .line-banner-title { font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px; }
+    .line-banner-desc { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:20px; }
+    .line-banner-steps { background:var(--bg3); border-radius:10px; padding:14px; text-align:left; margin-bottom:20px; font-size:13px; color:var(--text); }
+    .line-banner-steps li { margin-bottom:6px; display:flex; align-items:flex-start; gap:8px; }
+    .step-num { width:22px; height:22px; border-radius:50%; flex-shrink:0; background:var(--teal); color:white; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+    .btn-chrome { width:100%; background:linear-gradient(135deg,#1A73E8,#0288D1); border:none; border-radius:12px; padding:14px; color:white; font-family:'Sarabun',sans-serif; font-size:15px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 4px 14px rgba(26,115,232,.4); }
+    .btn-chrome-sub { font-size:11px; opacity:.8; }
+    .btn-continue-line { width:100%; margin-top:10px; background:none; border:1.5px solid var(--border-s); border-radius:12px; padding:12px; color:var(--text2); font-family:'Sarabun',sans-serif; font-size:14px; cursor:pointer; }
+
+    /* ── LOADER ──────────────────────────────────────── */
+    #appLoader { position:fixed; inset:0; z-index:9999; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+    .loader-ring { width:52px; height:52px; border:3px solid var(--border-s); border-top-color:var(--teal); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loader-text { color:var(--text2); font-size:13px; letter-spacing:1px; }
+
+    /* ── LOGIN ───────────────────────────────────────── */
+    #loginPage { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#FFFDE7 0%,#E0F7FA 50%,#F3E5F5 100%); position:relative; overflow:hidden; padding:16px; }
+    .login-bg { position:absolute; inset:0; pointer-events:none; background-image:radial-gradient(circle,rgba(174,198,207,.35) 1px,transparent 1px); background-size:28px 28px; }
+    .login-blob { position:absolute; border-radius:50%; filter:blur(60px); pointer-events:none; }
+    .lb1 { width:260px; height:260px; background:rgba(38,166,154,.12); top:10%; left:5%; }
+    .lb2 { width:200px; height:200px; background:rgba(174,213,129,.15); bottom:10%; right:8%; }
+    .lb3 { width:160px; height:160px; background:rgba(255,202,40,.10); top:50%; left:50%; transform:translate(-50%,-50%); }
+    .login-card { position:relative; z-index:10; width:100%; max-width:460px; background:rgba(255,255,255,.97); border:1px solid rgba(255,255,255,.8); border-radius:20px; padding:32px 28px; box-shadow:0 20px 60px rgba(0,0,0,.1),0 0 0 1px rgba(174,198,207,.3); }
+    .login-logo { text-align:center; padding:10px 0 16px; }
+    .login-logo-img { width:90px; height:auto; display:block; margin:0 auto 10px; }
+    .login-brand h1 { margin:0; font-size:22px; font-weight:bold; }
+    .login-brand p { margin:0; font-size:13px; color:#888; }
+    .auth-tabs { display:flex; border-radius:10px; background:var(--surface); padding:4px; margin-bottom:20px; }
+    .auth-tab { flex:1; padding:9px; text-align:center; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; transition:all .2s; color:var(--text2); border:none; background:none; font-family:'Sarabun',sans-serif; }
+    .auth-tab.active { background:white; color:var(--teal); box-shadow:var(--sh-sm); }
+    .auth-form { display:none; }
+    .auth-form.active { display:block; }
+    .form-group { margin-bottom:14px; }
+    .form-group label { display:block; font-size:12px; color:var(--text2); margin-bottom:6px; font-weight:500; }
+    .form-input { width:100%; background:var(--bg3); border:1.5px solid var(--border-s); border-radius:10px; padding:11px 13px; color:var(--text); font-family:'Sarabun',sans-serif; font-size:14px; outline:none; transition:border .2s,box-shadow .2s; -webkit-appearance:none; }
+    .form-input:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(38,166,154,.12); background:white; }
+    .btn-primary { width:100%; background:linear-gradient(135deg,var(--teal),var(--blue)); border:none; border-radius:10px; padding:13px; color:white; font-family:'Sarabun',sans-serif; font-size:15px; font-weight:600; cursor:pointer; transition:opacity .2s,transform .2s; margin-top:4px; box-shadow:0 4px 12px rgba(38,166,154,.3); -webkit-appearance:none; }
+    .btn-primary:hover { opacity:.92; transform:translateY(-1px); }
+    .btn-primary:disabled { opacity:.55; cursor:not-allowed; transform:none; }
+    .btn-forgot { background:none; border:none; color:var(--teal); font-family:'Sarabun',sans-serif; font-size:12px; cursor:pointer; text-decoration:underline; margin-top:10px; display:block; text-align:center; width:100%; }
+    .login-hint { text-align:center; margin-top:14px; font-size:11px; color:var(--text3); background:var(--bg3); border-radius:8px; padding:9px; border:1px dashed var(--border-s); }
+    .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:400px) { .form-row-2 { grid-template-columns:1fr; } }
+
+    /* ── LAYOUT ──────────────────────────────────────── */
+    #appLayout { display:flex; min-height:100vh; }
+
+    /* ── SIDEBAR ─────────────────────────────────────── */
+    #sidebar { width:var(--sidebar-w); background:linear-gradient(180deg,var(--teal) 0%,var(--purple) 100%); display:flex; flex-direction:column; flex-shrink:0; position:fixed; top:0; left:0; height:100vh; z-index:200; overflow-y:auto; overflow-x:hidden; transition:transform .3s cubic-bezier(.4,0,.2,1); box-shadow:4px 0 20px rgba(0,0,0,.1); }
+    @media (max-width:768px) { #sidebar { transform:translateX(-100%); } #sidebar.open { transform:translateX(0); box-shadow:8px 0 30px rgba(0,0,0,.2); } }
+    #sidebarOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:199; }
+    #sidebarOverlay.show { display:block; }
+    .sb-logo { display:flex; flex-direction:column; align-items:center; text-align:center; padding:16px 8px 8px; }
+    .sb-icon img { width:80px; height:auto; display:block; margin:0 auto; }
+    .sb-brand-name { font-size:15px; font-weight:700; color:white; margin-top:8px; }
+    .sb-brand-sub { font-size:9px; color:rgba(255,255,255,.7); font-family:'IBM Plex Mono',monospace; letter-spacing:1px; }
+    .sb-user { padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.15); display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.06); flex-shrink:0; }
+    .sb-avatar { width:36px; height:36px; border-radius:9px; flex-shrink:0; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:white; }
+    .sb-name { font-size:13px; font-weight:600; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:148px; }
+    .sb-role { font-size:10px; color:var(--green); font-family:'IBM Plex Mono',monospace; }
+    nav { padding:10px 8px; flex:1; }
+    .nav-section { font-size:9px; color:rgba(255,255,255,.5); letter-spacing:1.5px; text-transform:uppercase; padding:8px 10px 4px; font-family:'IBM Plex Mono',monospace; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 11px; border-radius:9px; cursor:pointer; color:rgba(255,255,255,.8); font-size:14px; font-weight:500; transition:all .2s; margin-bottom:2px; border:1px solid transparent; -webkit-tap-highlight-color:transparent; }
+    .nav-item:hover,.nav-item:active { background:rgba(255,255,255,.12); color:white; }
+    .nav-item.active { background:rgba(255,255,255,.2); color:white; font-weight:600; border-color:rgba(255,255,255,.25); }
+    .nav-icon { width:28px; height:28px; border-radius:7px; background:rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+    .nav-item.active .nav-icon { background:rgba(255,255,255,.25); }
+    .sb-footer { padding:12px 8px; border-top:1px solid rgba(255,255,255,.15); flex-shrink:0; }
+    .status-indicator { padding:9px 11px; background:rgba(255,255,255,.08); border-radius:9px; margin-bottom:6px; border:1px solid rgba(255,255,255,.1); }
+    .status-dot { display:inline-block; width:7px; height:7px; background:#A5D6A7; border-radius:50%; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── MAIN ────────────────────────────────────────── */
+    #mainContent { margin-left:var(--sidebar-w); flex:1; min-height:100vh; display:flex; flex-direction:column; min-width:0; }
+    @media (max-width:768px) { #mainContent { margin-left:0; } }
+
+    /* ── TOPBAR ──────────────────────────────────────── */
+    .topbar { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:rgba(255,255,255,.96); border-bottom:1px solid var(--border-s); position:sticky; top:0; z-index:100; box-shadow:var(--sh-sm); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); gap:10px; }
+    .topbar-left { display:flex; align-items:center; gap:12px; min-width:0; flex:1; }
+    .topbar-title { font-size:16px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .topbar-sub { font-size:11px; color:var(--text3); }
+    .topbar-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .topbar-time { font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--teal); background:rgba(38,166,154,.08); padding:7px 12px; border-radius:18px; border:1px solid rgba(38,166,154,.2); white-space:nowrap; }
+    .icon-btn { width:34px; height:34px; border-radius:18px; background:white; border:1px solid var(--border-s); color:var(--text2); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:13px; transition:all .2s; }
+    .icon-btn:hover { color:var(--teal); border-color:var(--teal); }
+    .menu-btn { display:none; width:36px; height:36px; border-radius:9px; background:var(--teal); border:none; color:white; flex-shrink:0; cursor:pointer; align-items:center; justify-content:center; font-size:15px; -webkit-tap-highlight-color:transparent; }
+    @media (max-width:768px) { .menu-btn { display:flex; } .topbar-sub { display:none; } }
+
+    /* ── PAGE CONTENT ────────────────────────────────── */
+    .page-content { padding:14px; flex:1; min-width:0; max-width:100%; }
+    @media (min-width:480px) { .page-content { padding:18px; } }
+    @media (min-width:768px) { .page-content { padding:22px 24px; } }
+    .page { display:none; }
+    .page.active { display:block; }
+
+    /* ── STAT CARDS ──────────────────────────────────── */
+    .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px; }
+    @media (min-width:640px) { .stats-grid { grid-template-columns:repeat(4,1fr); gap:14px; } }
+    .grad-card { border-radius:var(--radius); padding:18px 18px 16px; color:white; position:relative; overflow:hidden; box-shadow:var(--sh-md); transition:transform .2s,box-shadow .2s; }
+    .grad-card:hover { transform:translateY(-2px); box-shadow:var(--sh-lg); }
+    .gc1 { background:linear-gradient(135deg,#26A69A,#4DB6AC); }
+    .gc2 { background:linear-gradient(135deg,#7CB342,#AED581); }
+    .gc3 { background:linear-gradient(135deg,#F9A825,#FFCA28); }
+    .gc4 { background:linear-gradient(135deg,#E64A19,#FF8A65); }
+    .gc-blue { background:linear-gradient(135deg,#0277BD,#0288D1); }
+    .grad-card::before { content:''; position:absolute; right:-18px; top:-18px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,.12); }
+    .grad-card::after { content:''; position:absolute; right:22px; bottom:-28px; width:100px; height:100px; border-radius:50%; background:rgba(255,255,255,.08); }
+    .card-bubble { position:absolute; left:-14px; bottom:-14px; width:70px; height:70px; border-radius:50%; background:rgba(255,255,255,.1); pointer-events:none; }
+    .card-top { display:flex; justify-content:space-between; align-items:flex-start; position:relative; z-index:1; }
+    .card-label { font-size:11px; font-weight:500; opacity:.9; display:flex; align-items:center; gap:5px; margin-bottom:8px; }
+    .card-value { font-size:36px; font-weight:700; line-height:1; }
+    .card-sub { font-size:11px; opacity:.75; margin-top:6px; }
+    .card-icon { width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+
+    /* ── PANEL ───────────────────────────────────────── */
+    .panel { background:rgba(255,255,255,.93); border-radius:var(--radius); border:1px solid rgba(255,255,255,.6); box-shadow:var(--sh-sm); overflow:hidden; min-width:0; }
+    .panel-head { padding:14px 18px; border-bottom:1px solid rgba(174,198,207,.25); display:flex; align-items:center; justify-content:space-between; background:rgba(248,250,252,.5); gap:10px; flex-wrap:wrap; }
+    .panel-title { font-size:14px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:9px; }
+    .panel-icon { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; flex-shrink:0; }
+    .panel-body { padding:16px 18px; }
+
+    /* ── TABLE ───────────────────────────────────────── */
+    .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .data-table { width:100%; border-collapse:collapse; min-width:500px; }
+    .data-table th { text-align:left; padding:9px 12px; font-size:10px; color:var(--text2); text-transform:uppercase; letter-spacing:.7px; border-bottom:2px solid rgba(174,198,207,.3); font-weight:600; background:rgba(248,250,252,.8); white-space:nowrap; }
+    .data-table td { padding:10px 12px; font-size:13px; border-bottom:1px solid rgba(174,198,207,.15); color:var(--text); }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table tbody tr:hover td { background:rgba(38,166,154,.04); }
+
+    /* ── BADGES ──────────────────────────────────────── */
+    .badge { display:inline-flex; align-items:center; gap:3px; padding:3px 9px; border-radius:18px; font-size:11px; font-weight:600; white-space:nowrap; }
+    .b-green  { background:rgba(76,175,80,.12);   color:#388E3C; }
+    .b-red    { background:rgba(239,83,80,.12);   color:#C62828; }
+    .b-orange { background:rgba(255,138,101,.15); color:#E64A19; }
+    .b-blue   { background:rgba(38,166,154,.12);  color:#00796B; }
+    .b-gray   { background:rgba(144,164,174,.15); color:var(--text2); }
+
+    /* ── STEP BAR ────────────────────────────────────── */
+    .step-bar { background:white; border-radius:var(--radius); border:1px solid var(--border-s); padding:14px 18px; display:flex; align-items:center; gap:10px; margin-bottom:16px; box-shadow:var(--sh-sm); overflow-x:auto; }
+    .step-item { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .step-circle { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px; border:2px solid var(--border-s); color:var(--text3); background:var(--bg3); transition:all .3s; }
+    .step-circle.s-active { background:rgba(38,166,154,.1); border-color:var(--teal); color:var(--teal); }
+    .step-circle.s-done   { background:var(--teal); border-color:var(--teal); color:white; }
+    .step-line { flex:1; min-width:20px; height:2px; background:var(--border-s); transition:background .3s; }
+    .step-line.s-done { background:var(--teal); }
+    .step-text  { font-size:11px; color:var(--text3); white-space:nowrap; }
+    .step-text.s-active { color:var(--teal); font-weight:600; }
+    .step-label { font-size:12px; font-weight:600; color:var(--text); white-space:nowrap; }
+
+    /* ── CHECKIN GRID ────────────────────────────────── */
+    .checkin-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+    @media (min-width:900px) { .checkin-grid { grid-template-columns:1fr 1fr; } }
+    .checkin-grid > * { min-width:0; max-width:100%; overflow:hidden; }
+
+    /* ════════════════════════════════════════════════════
+       CAMERA — Full rework for cross-browser support
+       ════════════════════════════════════════════════════ */
+    .camera-wrap {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #111;
+      aspect-ratio: 4/3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 160px;
+      max-height: 300px;
+      width: 100%;
+    }
+    /* ── Placeholder ── */
+    .camera-placeholder {
+      text-align: center;
+      color: var(--text3);
+      padding: 20px;
+      z-index: 1;
+    }
+    .camera-placeholder i { font-size:36px; margin-bottom:10px; opacity:.35; display:block; }
+    .camera-placeholder p { font-size:13px; }
+    /* ── Video / Canvas / Img ── */
+    .cam-video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+      transform: scaleX(-1);   /* mirror สำหรับ front camera */
+    }
+    .cam-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+    /* ── LIVE badge ── */
+    .cam-live-badge {
+      position: absolute; top:10px; left:10px; z-index:5;
+      background: rgba(239,83,80,.85); color: white;
+      font-size:11px; font-weight:700; letter-spacing:.5px;
+      padding: 3px 9px; border-radius:18px;
+      display: none; align-items:center; gap:5px;
+    }
+    .cam-live-dot { width:6px; height:6px; border-radius:50%; background:white; animation:pulse .9s infinite; }
+
+    /* ── PRIMARY section (file input / mobile camera) ── */
+    .cam-primary-section { margin-top:10px; }
+    .cam-primary-section input[type=file] { display:none; }
+    .cam-capture-label {
+      display: flex; align-items:center; justify-content:center; gap:10px;
+      width: 100%; padding:14px; border-radius:11px;
+      cursor: pointer; font-family:'Sarabun',sans-serif;
+      font-size:15px; font-weight:700; color:white; border:none;
+      transition:opacity .2s, transform .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cam-capture-label:active { opacity:.85; transform:scale(.98); }
+    .cam-capture-label.teal-grad   { background:linear-gradient(135deg,var(--teal),var(--teal-l)); box-shadow:0 4px 14px rgba(38,166,154,.35); }
+    .cam-capture-label.orange-grad { background:linear-gradient(135deg,var(--orange-d),var(--orange)); box-shadow:0 4px 14px rgba(255,138,101,.35); }
+    .cam-retake-row { display:none; align-items:center; gap:8px; margin-top:8px; }
+    .cam-retake-row.show { display:flex; }
+
+    /* ── FLIP camera button ── */
+    .cam-flip-btn {
+      position: absolute; top:10px; right:10px; z-index:10;
+      width:36px; height:36px; border-radius:50%;
+      background:rgba(0,0,0,.45); border:none; color:white;
+      cursor:pointer; display:none; align-items:center; justify-content:center;
+      font-size:16px; -webkit-tap-highlight-color:transparent;
+      transition:background .2s;
+    }
+    .cam-flip-btn.show { display:flex; }
+    .cam-flip-btn:hover { background:rgba(0,0,0,.6); }
+
+    /* ── LIVE section (desktop only) ── */
+    .cam-live-section { margin-top:10px; padding:10px 12px; background:rgba(248,250,252,.8); border:1.5px dashed var(--border-s); border-radius:9px; }
+    .cam-live-label { font-size:11px; color:var(--text3); margin-bottom:7px; display:flex; align-items:center; gap:5px; }
+    .camera-controls { display:flex; gap:8px; flex-wrap:wrap; }
+    .cam-error { display:none; margin-top:8px; background:rgba(239,83,80,.08); border:1.5px solid rgba(239,83,80,.3); border-radius:9px; padding:10px 14px; font-size:12px; color:#C62828; }
+    .cam-error.show { display:flex; gap:8px; align-items:flex-start; }
+    .cam-guide { background:rgba(2,136,209,.06); border:1.5px solid rgba(2,136,209,.25); border-radius:9px; padding:10px 13px; margin-top:8px; font-size:12px; color:var(--blue); display:none; }
+    .cam-guide.show { display:block; }
+    .cam-guide ol { margin-top:5px; padding-left:18px; }
+    .cam-guide li { margin-bottom:2px; }
+
+    /* ── HTTPS warning ── */
+    .cam-https-warn { background:rgba(255,202,40,.1); border:1.5px solid rgba(255,202,40,.4); border-radius:9px; padding:10px 13px; margin-top:8px; font-size:12px; color:#F57F17; display:none; }
+    .cam-https-warn.show { display:flex; gap:8px; align-items:flex-start; }
+
+    /* ── BUTTONS ─────────────────────────────────────── */
+    .btn { padding:9px 16px; border-radius:9px; font-family:'Sarabun',sans-serif; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .2s; display:inline-flex; align-items:center; gap:7px; -webkit-appearance:none; -webkit-tap-highlight-color:transparent; white-space:nowrap; }
+    .btn:disabled { opacity:.45; cursor:not-allowed; }
+    .btn-teal   { background:linear-gradient(135deg,var(--teal),var(--teal-l)); color:white; box-shadow:0 3px 8px rgba(38,166,154,.3); }
+    .btn-teal:hover:not(:disabled) { box-shadow:0 5px 14px rgba(38,166,154,.35); transform:translateY(-1px); }
+    .btn-green  { background:rgba(76,175,80,.1); color:#388E3C; border:1.5px solid rgba(76,175,80,.3); }
+    .btn-green:hover:not(:disabled) { background:rgba(76,175,80,.18); }
+    .btn-red    { background:rgba(239,83,80,.1); color:#C62828; border:1.5px solid rgba(239,83,80,.3); }
+    .btn-orange { background:rgba(255,138,101,.1); color:#E64A19; border:1.5px solid rgba(255,138,101,.3); }
+    .btn-gray   { background:var(--surface); color:var(--text2); border:1.5px solid var(--border-s); }
+    .btn-gray:hover:not(:disabled) { background:var(--surface2); }
+    .btn-purple { background:linear-gradient(135deg,var(--purple),#6a3f8f); color:white; box-shadow:0 3px 8px rgba(74,44,109,.3); }
+    .btn-sm   { padding:6px 11px; font-size:12px; border-radius:7px; }
+    .btn-full { width:100%; justify-content:center; padding:13px; font-size:15px; }
+
+    /* ── SIGNATURE ───────────────────────────────────── */
+    .sig-wrap { border:1.5px solid var(--border-s); border-radius:10px; background:white; overflow:hidden; touch-action:none; cursor:crosshair; width:100%; }
+    .sig-wrap canvas { display:block; width:100% !important; max-width:100%; }
+
+    /* ── GPS ─────────────────────────────────────────── */
+    .gps-box { background:var(--bg3); border:1.5px solid var(--border-s); border-radius:9px; padding:9px 12px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text2); display:flex; align-items:center; gap:8px; overflow:hidden; }
+    .gps-box span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* ── TODAY STATUS ────────────────────────────────── */
+    .today-panel { background:linear-gradient(135deg,rgba(38,166,154,.05),rgba(174,213,129,.08)); border:1.5px solid rgba(38,166,154,.2); border-radius:var(--radius); padding:16px 18px; margin-bottom:18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+    .st-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .st-dot.yellow { background:var(--yellow); }
+    .st-time-block { text-align:center; }
+    .st-time-label { font-size:10px; color:var(--text3); margin-bottom:3px; text-transform:uppercase; letter-spacing:.5px; }
+    .st-time-val   { font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:700; color:var(--teal); }
+    .st-divider    { width:1px; height:44px; background:var(--border-s); flex-shrink:0; }
+
+    /* ── FILTER BAR ──────────────────────────────────── */
+    .filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:flex-end; }
+    .filter-group { display:flex; flex-direction:column; gap:4px; }
+    .filter-label { font-size:10px; color:var(--text3); font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
+    .filter-input { background:white; border:1.5px solid var(--border-s); border-radius:8px; padding:8px 11px; color:var(--text); font-family:'Sarabun',sans-serif; font-size:13px; outline:none; transition:border .2s; -webkit-appearance:none; max-width:100%; }
+    .filter-input:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(38,166,154,.1); }
+
+    /* ── PAGINATION ──────────────────────────────────── */
+    .pagination { display:flex; gap:5px; align-items:center; margin-top:14px; justify-content:flex-end; flex-wrap:wrap; }
+    .page-btn { width:32px; height:32px; border-radius:7px; background:white; border:1.5px solid var(--border-s); color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .2s; }
+    .page-btn:hover { border-color:var(--teal); color:var(--teal); }
+    .page-btn.active { background:var(--teal); border-color:var(--teal); color:white; }
+    .page-info { font-size:11px; color:var(--text3); padding:0 6px; font-family:'IBM Plex Mono',monospace; }
+
+    /* ── TOAST ───────────────────────────────────────── */
+    #toast { position:fixed; top:16px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; max-width:calc(100vw - 32px); pointer-events:none; }
+    .toast-item { padding:11px 16px; border-radius:10px; font-size:13px; display:flex; align-items:center; gap:9px; box-shadow:0 4px 20px rgba(0,0,0,.12); min-width:200px; max-width:320px; animation:slideIn .3s ease; pointer-events:auto; }
+    .toast-item.success { background:rgba(76,175,80,.12);  border:1.5px solid rgba(76,175,80,.3);  color:#2E7D32; }
+    .toast-item.error   { background:rgba(239,83,80,.1);   border:1.5px solid rgba(239,83,80,.3);  color:#C62828; }
+    .toast-item.info    { background:rgba(38,166,154,.1);  border:1.5px solid rgba(38,166,154,.3); color:#00695C; }
+    @keyframes slideIn { from { transform:translateX(120px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+    @keyframes fadeOut { to { opacity:0; transform:translateX(120px); } }
+
+    /* ── MODAL ───────────────────────────────────────── */
+    .modal-overlay { position:fixed; inset:0; background:rgba(84,110,122,.4); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); z-index:1000; display:none; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:white; border:1px solid var(--border-s); border-radius:18px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; box-shadow:var(--sh-lg); }
+    .modal-head { padding:18px 22px; border-bottom:1px solid var(--border-s); display:flex; justify-content:space-between; align-items:center; background:var(--bg3); position:sticky; top:0; z-index:5; }
+    .modal-title { font-size:16px; font-weight:700; color:var(--text); }
+    .modal-body { padding:20px 22px; }
+    .modal-footer { padding:14px 22px; border-top:1px solid var(--border-s); display:flex; gap:9px; justify-content:flex-end; background:var(--bg3); }
+
+    /* ── USERS GRID ──────────────────────────────────── */
+    .users-grid { display:grid; grid-template-columns:1fr; gap:14px; }
+    @media (min-width:480px) { .users-grid { grid-template-columns:1fr 1fr; } }
+    @media (min-width:900px) { .users-grid { grid-template-columns:repeat(3,1fr); } }
+    .user-card { background:white; border:1.5px solid var(--border-s); border-radius:13px; padding:18px; transition:all .2s; box-shadow:var(--sh-sm); min-width:0; }
+    .user-card:hover { border-color:var(--teal); transform:translateY(-2px); box-shadow:var(--sh-md); }
+    .uc-top { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .uc-avatar { width:42px; height:42px; border-radius:11px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:700; }
+    .uc-name { font-weight:600; font-size:14px; color:var(--text); }
+    .uc-dept { font-size:11px; color:var(--text3); }
+    .uc-meta { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+    .uc-actions { display:flex; gap:7px; flex-wrap:wrap; }
+
+    /* ── QUICK ACTIONS ───────────────────────────────── */
+    .quick-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+    @media (min-width:640px) { .quick-actions { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; } }
+    .quick-btn { background:white; border-radius:11px; border:1.5px solid var(--border-s); padding:12px 14px; cursor:pointer; display:flex; align-items:center; gap:10px; transition:all .2s; box-shadow:var(--sh-sm); -webkit-tap-highlight-color:transparent; min-width:0; }
+    .quick-btn:hover { transform:translateY(-2px); box-shadow:var(--sh-md); }
+    .qb-icon { width:36px; height:36px; border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:15px; color:white; }
+    .qb-text { min-width:0; }
+    .qb-text p { font-size:13px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .qb-text span { font-size:11px; color:var(--text3); }
+
+    /* ── FORM HELPERS ────────────────────────────────── */
+    .form-label { font-size:12px; font-weight:500; color:var(--text2); display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+    .form-textarea { width:100%; background:var(--bg3); border:1.5px solid var(--border-s); border-radius:9px; padding:10px 12px; color:var(--text); font-family:'Sarabun',sans-serif; font-size:14px; outline:none; transition:border .2s; resize:vertical; min-height:76px; -webkit-appearance:none; max-width:100%; }
+    .form-textarea:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(38,166,154,.1); background:white; }
+    .form-select { width:100%; background:white; border:1.5px solid var(--border-s); border-radius:9px; padding:10px 12px; color:var(--text); font-family:'Sarabun',sans-serif; font-size:14px; outline:none; cursor:pointer; -webkit-appearance:none; transition:border .2s; }
+    .form-select:focus { border-color:var(--teal); box-shadow:0 0 0 3px rgba(38,166,154,.1); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:480px) { .form-row { grid-template-columns:1fr; } }
+    .fmb { margin-bottom:14px; }
+
+    /* ── PAGE HEADER ─────────────────────────────────── */
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+    .ph-left { display:flex; align-items:center; gap:12px; }
+    .ph-icon { width:42px; height:42px; border-radius:11px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:18px; color:white; }
+    .ph-text h2 { font-size:18px; font-weight:700; color:var(--text); }
+    @media (min-width:480px) { .ph-text h2 { font-size:20px; } }
+    .ph-text p { font-size:12px; color:var(--text3); margin-top:1px; }
+
+    /* ── EMPTY STATE ─────────────────────────────────── */
+    .empty-state { text-align:center; padding:28px 16px; color:var(--text3); }
+    .empty-state i { font-size:30px; margin-bottom:8px; opacity:.3; display:block; }
+
+    /* ── REPORT STATS ────────────────────────────────── */
+    .report-stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+    @media (min-width:480px) { .report-stats { grid-template-columns:repeat(4,1fr); } }
+    .rsc { border-radius:12px; padding:14px; color:white; box-shadow:var(--sh-sm); position:relative; overflow:hidden; }
+    .rsc::after { content:''; position:absolute; right:-10px; bottom:-14px; width:60px; height:60px; border-radius:50%; background:rgba(255,255,255,.1); }
+    .rsc .card-value { font-size:24px; font-weight:700; }
+    .rsc .card-label { font-size:10px; opacity:.9; display:flex; align-items:center; gap:5px; margin-bottom:4px; }
+
+    /* ── ATTACHMENT ──────────────────────────────────── */
+    .attach-zone { border:2px dashed var(--border-s); border-radius:10px; padding:14px; background:var(--bg3); transition:all .2s; }
+    .attach-zone:hover { border-color:var(--orange); background:rgba(255,138,101,.04); }
+    .attach-zone input[type=file] { display:none; }
+    .attach-label { display:flex; align-items:center; gap:10px; cursor:pointer; color:var(--text2); font-size:13px; }
+    .attach-label i { font-size:22px; color:var(--orange); flex-shrink:0; }
+    .attach-list { margin-top:10px; display:flex; flex-direction:column; gap:6px; }
+    .attach-item { display:flex; align-items:center; gap:8px; background:white; border:1px solid var(--border-s); border-radius:8px; padding:7px 10px; font-size:12px; }
+    .attach-item i { color:var(--orange); flex-shrink:0; }
+    .attach-item span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text2); }
+    .attach-item .remove-attach { background:none; border:none; color:var(--red); cursor:pointer; padding:0; font-size:13px; }
+
+    /* ── CHARTS ──────────────────────────────────────── */
+    .dashboard-charts { display:grid; grid-template-columns:1fr; gap:16px; margin-top:16px; }
+    @media (min-width:900px) { .dashboard-charts { grid-template-columns:1fr 1fr; } }
+    .chart-container { background:white; border-radius:var(--radius); border:1px solid var(--border-s); box-shadow:var(--sh-sm); padding:16px; height:340px; display:flex; flex-direction:column; }
+    .chart-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+    .chart-title { font-size:14px; font-weight:600; color:var(--text); display:flex; align-items:center; gap:8px; }
+    .chart-icon { width:28px; height:28px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; color:white; flex-shrink:0; }
+    .chart-canvas-wrap { flex:1; position:relative; min-height:0; }
+    .chart-canvas-wrap canvas { position:absolute; inset:0; width:100%!important; height:100%!important; }
+    .donut-chart-container { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; min-height:0; }
+    .donut-canvas-wrap { position:relative; width:200px; height:200px; flex-shrink:0; }
+    .donut-canvas-wrap canvas { width:200px!important; height:200px!important; }
+    .donut-chart-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+    .donut-chart-label { font-size:11px; color:var(--text2); }
+    .donut-chart-value { font-size:28px; font-weight:700; color:var(--text); font-family:'IBM Plex Mono',monospace; }
+    .donut-legend { display:flex; gap:16px; margin-top:12px; flex-shrink:0; }
+    .donut-legend-item { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text2); }
+    .donut-legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+    /* ── LEAVE ───────────────────────────────────────── */
+    .leave-type-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px; }
+    @media (min-width:480px) { .leave-type-grid { grid-template-columns:repeat(3,1fr); } }
+    .leave-type-card { background:white; border:2px solid var(--border-s); border-radius:11px; padding:14px; cursor:pointer; text-align:center; transition:all .2s; }
+    .leave-type-card:hover { border-color:var(--teal); transform:translateY(-2px); }
+    .leave-type-card.selected { border-color:var(--teal); background:rgba(38,166,154,.06); }
+    .leave-type-card .lt-icon { font-size:24px; margin-bottom:6px; }
+    .leave-type-card .lt-name { font-size:13px; font-weight:600; color:var(--text); }
+    .leave-type-card .lt-days { font-size:11px; color:var(--text3); margin-top:3px; }
+    .leave-quota-bar { height:5px; border-radius:3px; background:var(--surface2); margin-top:7px; overflow:hidden; }
+    .leave-quota-fill { height:100%; border-radius:3px; background:var(--teal); }
+    .leave-card { background:white; border:1.5px solid var(--border-s); border-radius:12px; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; box-shadow:var(--sh-sm); }
+    .leave-card-icon { width:40px; height:40px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .leave-badge { padding:3px 10px; border-radius:18px; font-size:11px; font-weight:600; }
+    .lb-pending  { background:rgba(255,202,40,.15); color:#F57F17; }
+    .lb-approved { background:rgba(76,175,80,.12);  color:#388E3C; }
+    .lb-rejected { background:rgba(239,83,80,.1);   color:#C62828; }
+
+    /* ── IMAGE MODAL ─────────────────────────────────── */
+    #imgModal .modal { max-width:700px; }
+    .img-modal-body { padding:16px; text-align:center; background:#f0f0f0; }
+    .img-modal-body img { max-width:100%; max-height:70vh; border-radius:10px; box-shadow:var(--sh-md); object-fit:contain; }
+    .img-modal-actions { padding:12px 22px; border-top:1px solid var(--border-s); display:flex; gap:10px; justify-content:flex-end; background:var(--bg3); }
+
+    /* ── SHIMMER ─────────────────────────────────────── */
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+</head>
+<body>
+
+<!-- ══ LINE BROWSER BANNER ════════════════════════════════ -->
+<div id="lineBanner">
+  <div class="line-banner-box">
+    <div class="line-banner-icon">🌐</div>
+    <div class="line-banner-title">แนะนำให้เปิดด้วย Chrome</div>
+    <div class="line-banner-desc">เบราว์เซอร์ภายใน LINE ไม่รองรับกล้องถ่ายภาพ<br>กรุณาเปิดลิงก์นี้ใน <strong>Google Chrome</strong></div>
+    <ul class="line-banner-steps">
+      <li><span class="step-num">1</span><span>แตะปุ่ม <strong>"⋯"</strong> มุมขวาบน</span></li>
+      <li><span class="step-num">2</span><span>เลือก <strong>"เปิดใน Chrome"</strong></span></li>
+      <li><span class="step-num">3</span><span>ใช้งานกล้องได้ตามปกติ</span></li>
+    </ul>
+    <button class="btn-chrome" onclick="Camera.tryOpenChrome()"><i class="fab fa-chrome"></i><div><div>เปิดใน Google Chrome</div><div class="btn-chrome-sub">แตะเพื่อเปิดอัตโนมัติ</div></div></button>
+    <button class="btn-continue-line" onclick="Camera.dismissLineBanner()">ใช้งานต่อใน LINE Browser</button>
+  </div>
+</div>
+
+<!-- ══ LOADER ═══════════════════════════════════════════════ -->
+<div id="appLoader"><div class="loader-ring"></div><p class="loader-text">กำลังโหลดระบบ...</p></div>
+
+<!-- ══ TOAST ════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ══ SIDEBAR OVERLAY ══════════════════════════════════════ -->
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ══ LOGIN PAGE ════════════════════════════════════════════ -->
+<div id="loginPage" style="display:none">
+  <div class="login-bg"></div>
+  <div class="login-blob lb1"></div>
+  <div class="login-blob lb2"></div>
+  <div class="login-blob lb3"></div>
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="https://lh3.googleusercontent.com/d/1tEuBft9_e3q6Q79o6vHI_HMRaL2hSNB3" alt="logo" class="login-logo-img" onerror="this.style.display='none'">
+      <div class="login-brand"><h1>WFH SYSTEM</h1><p>ระบบลงเวลาปฏิบัติงาน</p></div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')"><i class="fas fa-user-plus"></i> ลงทะเบียน</button>
+    </div>
+    <div id="loginForm" class="auth-form active">
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group"><label>อีเมล / ชื่อผู้ใช้</label><input class="form-input" id="loginUser" type="text" placeholder="กรอกอีเมลหรือชื่อผู้ใช้" required autocomplete="username"></div>
+        <div class="form-group"><label>รหัสผ่าน</label><input class="form-input" id="loginPass" type="password" placeholder="••••••••" required autocomplete="current-password"></div>
+        <button type="submit" class="btn-primary" id="loginBtn"><i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ</button>
+      </form>
+      <button class="btn-forgot" onclick="handleForgotPassword()"><i class="fas fa-key"></i> ลืมรหัสผ่าน?</button>
+    </div>
+    <div id="registerForm" class="auth-form">
+      <form onsubmit="handleRegister(event)">
+        <div class="form-group"><label>ชื่อ-สกุล *</label><input class="form-input" id="regName" type="text" placeholder="ชื่อ นามสกุล" required></div>
+        <div class="form-row-2">
+          <div class="form-group"><label>กลุ่มงาน</label><input class="form-input" id="regDept" type="text" placeholder="หน่วยงาน"></div>
+          <div class="form-group"><label>ตำแหน่ง</label><input class="form-input" id="regPos" type="text" placeholder="ตำแหน่ง"></div>
+        </div>
+        <div class="form-group"><label>อีเมล *</label><input class="form-input" id="regEmail" type="email" placeholder="your@email.com" required autocomplete="email"></div>
+        <div class="form-group"><label>รหัสผ่าน *</label><input class="form-input" id="regPass" type="password" placeholder="อย่างน้อย 6 ตัว" required minlength="6"></div>
+        <div class="form-group"><label>ยืนยันรหัสผ่าน *</label><input class="form-input" id="regPass2" type="password" placeholder="กรอกอีกครั้ง" required></div>
+        <button type="submit" class="btn-primary" id="registerBtn" style="background:linear-gradient(135deg,var(--green-d),var(--teal))"><i class="fas fa-user-plus"></i> ลงทะเบียน</button>
+      </form>
+    </div>
+    <div class="login-hint"><i class="fas fa-info-circle" style="color:var(--blue);margin-right:5px"></i>ระบบลงเวลา Work From Home</div>
+  </div>
+</div>
+
+<!-- ══ APP LAYOUT ════════════════════════════════════════════ -->
+<div id="appLayout" style="display:none">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon"><img src="https://lh3.googleusercontent.com/d/1tEuBft9_e3q6Q79o6vHI_HMRaL2hSNB3" alt="logo" onerror="this.style.display='none'"></div>
+      <div><div class="sb-brand-name">WFH SYSTEM</div><div class="sb-brand-sub">ATTENDANCE</div></div>
+    </div>
+    <div class="sb-user">
+      <div class="sb-avatar" id="sidebarAvatar">A</div>
+      <div style="min-width:0"><div class="sb-name" id="sidebarName">ผู้ใช้งาน</div><div class="sb-role" id="sidebarRole">USER</div></div>
+    </div>
+    <nav>
+      <div class="nav-section">หลัก</div>
+      <div class="nav-item active" onclick="switchPage('dashboard')"><div class="nav-icon"><i class="fas fa-th-large"></i></div>Dashboard</div>
+      <div class="nav-item" onclick="switchPage('checkin')"><div class="nav-icon"><i class="fas fa-sign-in-alt"></i></div>ลงเวลาเข้างาน</div>
+      <div class="nav-item" onclick="switchPage('checkout')"><div class="nav-icon"><i class="fas fa-sign-out-alt"></i></div>ลงเวลาออกงาน</div>
+      <div class="nav-item" id="navHistory" onclick="switchPage('history')"><div class="nav-icon"><i class="fas fa-history"></i></div><span id="navHistoryLabel">ประวัติของฉัน</span></div>
+      <div class="nav-item" onclick="switchPage('leave')"><div class="nav-icon"><i class="fas fa-calendar-minus"></i></div>ขอลาหยุด</div>
+      <div class="nav-section admin-only" style="display:none">ผู้ดูแลระบบ</div>
+      <div class="nav-item admin-only" style="display:none" onclick="switchPage('report')"><div class="nav-icon"><i class="fas fa-file-alt"></i></div>รายงานทั้งหมด</div>
+      <div class="nav-item admin-only" style="display:none" onclick="switchPage('monthlyReport')"><div class="nav-icon"><i class="fas fa-chart-line"></i></div>รายงานรายเดือน</div>
+      <div class="nav-item admin-only" style="display:none" onclick="switchPage('users')"><div class="nav-icon"><i class="fas fa-users-cog"></i></div>จัดการผู้ใช้</div>
+    </nav>
+    <div class="sb-footer">
+      <div class="status-indicator"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:6px"><span class="status-dot"></span><span style="font-size:11px;color:rgba(255,255,255,.75)">สถานะระบบ</span></div><span style="font-size:10px;color:rgba(255,255,255,.9);font-family:'IBM Plex Mono',monospace">Online</span></div></div>
+      <div class="nav-item" onclick="logout()" style="color:rgba(255,179,179,.9)"><div class="nav-icon" style="background:rgba(239,83,80,.2)"><i class="fas fa-power-off"></i></div>ออกจากระบบ</div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main id="mainContent">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+        <div>
+          <div class="topbar-title" id="pageTitle">Dashboard</div>
+          <div class="topbar-sub" id="pageDate">--/--/----</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-time" id="liveClock">00:00:00</div>
+        <button class="icon-btn" onclick="refreshPage()" title="รีเฟรช"><i class="fas fa-sync-alt"></i></button>
+      </div>
+    </div>
+
+    <div class="page-content">
+
+      <!-- ══ DASHBOARD ══════════════════════════════════ -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-header">
+          <div class="ph-left">
+            <div class="ph-icon" style="background:linear-gradient(135deg,var(--teal),var(--blue))"><i class="fas fa-chart-pie"></i></div>
+            <div class="ph-text"><h2>แผงควบคุมภาพรวม</h2><p>สถิติการลงเวลาปฏิบัติงานแบบเรียลไทม์</p></div>
+          </div>
+          <span style="font-size:12px;font-weight:500;background:white;padding:7px 12px;border-radius:18px;border:1px solid var(--border-s);color:var(--teal);display:flex;align-items:center;gap:7px;box-shadow:var(--sh-sm);white-space:nowrap"><i class="fas fa-calendar-day" style="color:var(--green)"></i><span id="topbarDate">--/--/----</span></span>
+        </div>
+        <div class="stats-grid">
+          <div class="grad-card gc1"><div class="card-bubble"></div><div class="card-top"><div><div class="card-label"><i class="fas fa-users"></i>เจ้าหน้าที่ทั้งหมด</div><div class="card-value" id="st-total">-</div><div class="card-sub">คนในระบบ</div></div><div class="card-icon"><i class="fas fa-id-card"></i></div></div></div>
+          <div class="grad-card gc2"><div class="card-bubble"></div><div class="card-top"><div><div class="card-label"><i class="fas fa-check-circle"></i>เข้างานวันนี้</div><div class="card-value" id="st-today">-</div><div class="card-sub">คน</div></div><div class="card-icon"><i class="fas fa-user-check"></i></div></div></div>
+          <div class="grad-card gc3"><div class="card-bubble"></div><div class="card-top"><div><div class="card-label"><i class="fas fa-clock"></i>มาสาย</div><div class="card-value" id="st-late">-</div><div class="card-sub">คน</div></div><div class="card-icon"><i class="fas fa-hourglass-half"></i></div></div></div>
+          <div class="grad-card gc4"><div class="card-bubble"></div><div class="card-top"><div><div class="card-label"><i class="fas fa-sign-out-alt"></i>ออกงานแล้ว</div><div class="card-value" id="st-out">-</div><div class="card-sub">คน</div></div><div class="card-icon"><i class="fas fa-door-open"></i></div></div></div>
+        </div>
+        <div class="quick-actions">
+          <div class="quick-btn" onclick="switchPage('checkin')" style="border-left:4px solid var(--teal)"><div class="qb-icon" style="background:var(--teal)"><i class="fas fa-sign-in-alt"></i></div><div class="qb-text"><p>ลงเวลาเข้างาน</p><span>บันทึกการเข้างาน</span></div></div>
+          <div class="quick-btn" onclick="switchPage('checkout')" style="border-left:4px solid var(--orange)"><div class="qb-icon" style="background:var(--orange)"><i class="fas fa-sign-out-alt"></i></div><div class="qb-text"><p>ลงเวลาออกงาน</p><span>บันทึกการออกงาน</span></div></div>
+          <div class="quick-btn" onclick="switchPage('history')" style="border-left:4px solid var(--green-d)"><div class="qb-icon" style="background:var(--green-d)"><i class="fas fa-history"></i></div><div class="qb-text"><p id="dashHistLabel">ประวัติของฉัน</p><span id="dashHistSub">ดูรายการลงเวลา</span></div></div>
+          <div class="quick-btn" onclick="switchPage('leave')" style="border-left:4px solid var(--purple)"><div class="qb-icon" style="background:var(--purple)"><i class="fas fa-calendar-minus"></i></div><div class="qb-text"><p>ขอลาหยุด</p><span>ยื่นใบลาออนไลน์</span></div></div>
+          <div class="quick-btn admin-only" style="display:none;border-left:4px solid var(--blue)" onclick="switchPage('report')"><div class="qb-icon" style="background:var(--blue)"><i class="fas fa-file-alt"></i></div><div class="qb-text"><p>รายงาน</p><span>สรุปสถิติทั้งหมด</span></div></div>
+        </div>
+        <div id="myTodayBody" style="margin-bottom:18px"><div class="today-panel"><i class="fas fa-spinner fa-spin" style="color:var(--text3)"></i><span style="font-size:13px;color:var(--text3)">กำลังโหลดสถานะ...</span></div></div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--red)"><i class="fas fa-history"></i></div>กิจกรรมล่าสุด</div><button class="btn btn-sm btn-gray" onclick="loadDashboard()"><i class="fas fa-sync-alt"></i> รีเฟรช</button></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>วันที่</th><th>ชื่อ-สกุล</th><th>กลุ่ม</th><th>เวลาเข้า</th><th>สถานะ</th><th>เวลาออก</th><th>ภารกิจ</th></tr></thead><tbody id="recentBody"><tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i>ยังไม่มีข้อมูล</div></td></tr></tbody></table></div>
+        </div>
+        <div class="dashboard-charts">
+          <div class="chart-container"><div class="chart-header"><div class="chart-title"><div class="chart-icon" style="background:var(--blue)"><i class="fas fa-chart-bar"></i></div>สถิติรายเดือน (แยกตามกลุ่มงาน)</div></div><div class="chart-canvas-wrap"><canvas id="chartByDept"></canvas></div></div>
+          <div class="chart-container"><div class="chart-header"><div class="chart-title"><div class="chart-icon" style="background:var(--purple)"><i class="fas fa-chart-pie"></i></div>สัดส่วนสถานะวันนี้</div></div><div class="donut-chart-container"><div class="donut-canvas-wrap"><canvas id="todayStatusChart"></canvas><div class="donut-chart-center"><div class="donut-chart-label">รวม</div><div class="donut-chart-value" id="todayTotalValue">0</div><div style="font-size:11px;color:var(--text2)">คน</div></div></div><div class="donut-legend"><div class="donut-legend-item"><div class="donut-legend-dot" style="background:rgba(76,175,80,.8)"></div>ตรงเวลา <b id="legendOntime">0</b></div><div class="donut-legend-item"><div class="donut-legend-dot" style="background:rgba(239,83,80,.8)"></div>มาสาย <b id="legendLate">0</b></div></div></div></div>
+        </div>
+      </div>
+
+      <!-- ══ CHECK-IN ════════════════════════════════════ -->
+      <div id="page-checkin" class="page">
+        <div class="ph-left" style="margin-bottom:16px"><div class="ph-icon" style="background:linear-gradient(135deg,var(--teal),var(--teal-l))"><i class="fas fa-sign-in-alt"></i></div><div class="ph-text"><h2>ลงเวลาเข้างาน</h2><p>บันทึกเวลาเข้าพร้อมรูปถ่ายและลายเซ็น</p></div></div>
+        <div class="step-bar">
+          <div class="step-item"><div class="step-circle s-active" id="ciStep1"><i class="fas fa-camera"></i></div><div><div class="step-label">ถ่ายรูป</div><div class="step-text s-active">ขั้นที่ 1</div></div></div>
+          <div class="step-line" id="ciLine1"></div>
+          <div class="step-item"><div class="step-circle" id="ciStep2"><i class="fas fa-pen"></i></div><div><div class="step-label">ลายเซ็น</div><div class="step-text">ขั้นที่ 2</div></div></div>
+          <div class="step-line" id="ciLine2"></div>
+          <div class="step-item"><div class="step-circle" id="ciStep3"><i class="fas fa-save"></i></div><div><div class="step-label">บันทึก</div><div class="step-text">ขั้นที่ 3</div></div></div>
+        </div>
+        <div class="checkin-grid">
+          <!-- CAMERA PANEL -->
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--teal)"><i class="fas fa-camera"></i></div>ถ่ายรูปเข้างาน</div><span style="font-size:11px;color:var(--text3)">* จำเป็น</span></div>
+            <div class="panel-body">
+              <!-- CAMERA WRAP -->
+              <div class="camera-wrap" id="camWrapIn">
+                <div class="camera-placeholder" id="camPhIn"><i class="fas fa-camera"></i><p id="camPhInTxt">กดปุ่มถ่ายรูปด้านล่าง</p></div>
+                <video id="camVidIn" class="cam-video" autoplay playsinline muted webkit-playsinline></video>
+                <canvas id="camCanvasIn" style="display:none"></canvas>
+                <img id="camImgIn" class="cam-img" alt="รูปเข้างาน">
+                <div class="cam-live-badge" id="camLiveIn"><div class="cam-live-dot"></div> LIVE</div>
+                <!-- FLIP BUTTON (mobile only, shows when live) -->
+                <button class="cam-flip-btn" id="camFlipIn" onclick="Camera.flipCamera('in')" title="สลับกล้อง"><i class="fas fa-sync-alt"></i></button>
+              </div>
+
+              <!-- FILE INPUT (PRIMARY) -->
+              <div class="cam-primary-section" id="camPrimaryIn">
+                <input type="file" id="fileIn" accept="image/*" capture="user">
+                <label for="fileIn" class="cam-capture-label teal-grad" id="fileLabelIn">
+                  <i class="fas fa-camera" id="fileLabelInIcon"></i>
+                  <span id="fileLabelInText">ถ่ายรูป / เลือกไฟล์</span>
+                </label>
+                <div class="cam-retake-row" id="retakeRowIn">
+                  <button class="btn btn-gray" onclick="Camera.retake('in')"><i class="fas fa-redo"></i> ถ่ายใหม่</button>
+                  <span style="font-size:12px;color:var(--green-d);font-weight:600"><i class="fas fa-check-circle"></i> ได้รูปแล้ว</span>
+                </div>
+              </div>
+
+              <!-- LIVE CAMERA (desktop) -->
+              <div class="cam-live-section" id="camLiveSectionIn">
+                <div class="cam-live-label"><i class="fas fa-video"></i> หรือใช้กล้องสด (Desktop):</div>
+                <div class="camera-controls">
+                  <button class="btn btn-sm btn-gray" onclick="Camera.startLive('in')" id="btnCamIn"><i class="fas fa-video"></i> เปิดกล้องสด</button>
+                  <button class="btn btn-sm btn-green" onclick="Camera.captureFromLive('in')" id="btnCapIn" disabled><i class="fas fa-camera"></i> ถ่าย</button>
+                  <button class="btn btn-sm btn-gray" onclick="Camera.retake('in')" id="btnRetakeIn" style="display:none"><i class="fas fa-redo"></i> ถ่ายใหม่</button>
+                </div>
+              </div>
+
+              <!-- ERROR / GUIDE -->
+              <div class="cam-error" id="camErrIn"></div>
+              <div class="cam-guide" id="camGuideIn">
+                <strong><i class="fas fa-lightbulb"></i> วิธีอนุญาตกล้อง:</strong>
+                <ol><li>คลิกไอคอนกล้อง/แม่กุญแจ ในแถบ URL</li><li>เลือก "อนุญาต"</li><li>รีเฟรชหน้า</li></ol>
+              </div>
+              <div class="cam-https-warn" id="camHttpsIn">
+                <i class="fas fa-exclamation-triangle" style="flex-shrink:0"></i>
+                <span>กล้องสดต้องใช้ HTTPS — ใช้ปุ่มถ่ายรูปด้านบนแทน</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- FORM PANEL -->
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--green-d)"><i class="fas fa-edit"></i></div>ข้อมูลการเข้างาน</div></div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="fmb"><label class="form-label"><i class="fas fa-tasks" style="color:var(--teal)"></i>ภารกิจ / แผนงานวันนี้</label><textarea class="form-textarea" id="ciTask" placeholder="ระบุงานที่จะทำวันนี้..."></textarea></div>
+              <div class="fmb"><label class="form-label"><i class="fas fa-map-marker-alt" style="color:var(--orange)"></i>สถานที่</label><select class="form-select" id="ciLocation"><option value="Work From Home">Work From Home</option><option value="สำนักงาน">สำนักงาน</option><option value="ออกนอกสถานที่">ออกนอกสถานที่</option></select></div>
+              <div class="fmb"><label class="form-label"><i class="fas fa-location-arrow" style="color:var(--red)"></i>พิกัด GPS</label><div class="gps-box"><i class="fas fa-map-pin" style="color:var(--orange);flex-shrink:0"></i><span id="ciGPSTxt">กำลังรอพิกัด...</span><button class="btn btn-sm btn-gray" onclick="getGPS('ci')" style="flex-shrink:0"><i class="fas fa-crosshairs"></i></button></div></div>
+              <div class="fmb"><label class="form-label"><i class="fas fa-signature" style="color:var(--purple)"></i>ลายเซ็นเข้างาน</label><div class="sig-wrap"><canvas id="sigIn"></canvas></div><div style="margin-top:6px"><button class="btn btn-sm btn-gray" onclick="clearSig('in')"><i class="fas fa-eraser"></i> ล้าง</button></div></div>
+              <button class="btn btn-teal btn-full" id="btnCheckIn" onclick="submitCheckIn()"><i class="fas fa-sign-in-alt"></i> บันทึกเวลาเข้างาน</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CHECK-OUT ═══════════════════════════════════ -->
+      <div id="page-checkout" class="page">
+        <div class="ph-left" style="margin-bottom:16px"><div class="ph-icon" style="background:linear-gradient(135deg,var(--orange),var(--orange-d))"><i class="fas fa-sign-out-alt"></i></div><div class="ph-text"><h2>ลงเวลาออกงาน</h2><p>บันทึกเวลาออกพร้อมสรุปผลงาน</p></div></div>
+        <div class="checkin-grid">
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--orange)"><i class="fas fa-camera"></i></div>ถ่ายรูปออกงาน</div><span style="font-size:11px;color:var(--text3)">* จำเป็น</span></div>
+            <div class="panel-body">
+              <div class="camera-wrap" id="camWrapOut">
+                <div class="camera-placeholder" id="camPhOut"><i class="fas fa-camera"></i><p id="camPhOutTxt">กดปุ่มถ่ายรูปด้านล่าง</p></div>
+                <video id="camVidOut" class="cam-video" autoplay playsinline muted webkit-playsinline></video>
+                <canvas id="camCanvasOut" style="display:none"></canvas>
+                <img id="camImgOut" class="cam-img" alt="รูปออกงาน">
+                <div class="cam-live-badge" id="camLiveOut"><div class="cam-live-dot"></div> LIVE</div>
+                <button class="cam-flip-btn" id="camFlipOut" onclick="Camera.flipCamera('out')" title="สลับกล้อง"><i class="fas fa-sync-alt"></i></button>
+              </div>
+              <div class="cam-primary-section" id="camPrimaryOut">
+                <input type="file" id="fileOut" accept="image/*" capture="user">
+                <label for="fileOut" class="cam-capture-label orange-grad" id="fileLabelOut"><i class="fas fa-camera"></i><span id="fileLabelOutText">ถ่ายรูป / เลือกไฟล์</span></label>
+                <div class="cam-retake-row" id="retakeRowOut"><button class="btn btn-gray" onclick="Camera.retake('out')"><i class="fas fa-redo"></i> ถ่ายใหม่</button><span style="font-size:12px;color:var(--green-d);font-weight:600"><i class="fas fa-check-circle"></i> ได้รูปแล้ว</span></div>
+              </div>
+              <div class="cam-live-section" id="camLiveSectionOut">
+                <div class="cam-live-label"><i class="fas fa-video"></i> หรือใช้กล้องสด (Desktop):</div>
+                <div class="camera-controls">
+                  <button class="btn btn-sm btn-gray" onclick="Camera.startLive('out')" id="btnCamOut"><i class="fas fa-video"></i> เปิดกล้องสด</button>
+                  <button class="btn btn-sm btn-green" onclick="Camera.captureFromLive('out')" id="btnCapOut" disabled><i class="fas fa-camera"></i> ถ่าย</button>
+                  <button class="btn btn-sm btn-gray" onclick="Camera.retake('out')" id="btnRetakeOut" style="display:none"><i class="fas fa-redo"></i> ถ่ายใหม่</button>
+                </div>
+              </div>
+              <div class="cam-error" id="camErrOut"></div>
+              <div class="cam-guide" id="camGuideOut"><strong><i class="fas fa-lightbulb"></i> วิธีอนุญาตกล้อง:</strong><ol><li>คลิกไอคอนกล้อง/แม่กุญแจ</li><li>เลือก "อนุญาต"</li><li>รีเฟรชหน้า</li></ol></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--orange-d)"><i class="fas fa-edit"></i></div>สรุปผลงานประจำวัน</div></div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:12px">
+              <div class="fmb"><label class="form-label"><i class="fas fa-check-double" style="color:var(--green-d)"></i>ผลงาน / สิ่งที่ทำสำเร็จ</label><textarea class="form-textarea" id="coTask" placeholder="ระบุงานที่ทำสำเร็จ..."></textarea></div>
+              <div class="fmb"><label class="form-label"><i class="fas fa-location-arrow" style="color:var(--red)"></i>พิกัด GPS</label><div class="gps-box"><i class="fas fa-map-pin" style="color:var(--green-d);flex-shrink:0"></i><span id="coGPSTxt">กำลังรอพิกัด...</span><button class="btn btn-sm btn-gray" onclick="getGPS('co')" style="flex-shrink:0"><i class="fas fa-crosshairs"></i></button></div></div>
+              <div class="fmb">
+                <label class="form-label"><i class="fas fa-paperclip" style="color:var(--orange)"></i>แนบไฟล์ <span style="color:var(--text3);font-weight:400">(สูงสุด 3 ไฟล์)</span></label>
+                <div class="attach-zone"><input type="file" id="attachInput" accept="image/*,.pdf" multiple onchange="onAttachFiles(this)"><label for="attachInput" class="attach-label"><i class="fas fa-cloud-upload-alt"></i><div><div style="font-weight:600;color:var(--text)">เลือกไฟล์แนบ</div><div style="font-size:11px;color:var(--text3);margin-top:2px">รูปภาพ หรือ PDF</div></div></label><div class="attach-list" id="attachList"></div></div>
+              </div>
+              <div class="fmb"><label class="form-label"><i class="fas fa-signature" style="color:var(--purple)"></i>ลายเซ็นออกงาน</label><div class="sig-wrap"><canvas id="sigOut"></canvas></div><div style="margin-top:6px"><button class="btn btn-sm btn-gray" onclick="clearSig('out')"><i class="fas fa-eraser"></i> ล้าง</button></div></div>
+              <button class="btn btn-orange btn-full" id="btnCheckOut" onclick="submitCheckOut()"><i class="fas fa-sign-out-alt"></i> บันทึกเวลาออกงาน</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ HISTORY ══════════════════════════════════════ -->
+      <div id="page-history" class="page">
+        <div class="page-header">
+          <div class="ph-left"><div class="ph-icon" style="background:linear-gradient(135deg,var(--blue),var(--teal))"><i class="fas fa-history"></i></div><div class="ph-text"><h2 id="histPageTitle">ประวัติของฉัน</h2><p id="histPageSub">ดูรายการลงเวลาย้อนหลัง</p></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-purple admin-only" style="display:none" id="btnPrintDaily" onclick="openDailyPdfModal()"><i class="fas fa-file-pdf"></i> พิมพ์รายงานประจำวัน</button></div>
+        </div>
+        <div class="filter-bar">
+          <div class="filter-group admin-only" style="display:none" id="histUserFilter"><div class="filter-label">เจ้าหน้าที่</div><select class="filter-input" id="histUserSel" style="min-width:140px"><option value="all">-- ทั้งหมด --</option></select></div>
+          <div class="filter-group"><div class="filter-label">ตั้งแต่วันที่</div><input type="date" class="filter-input" id="histStart"></div>
+          <div class="filter-group"><div class="filter-label">ถึงวันที่</div><input type="date" class="filter-input" id="histEnd"></div>
+          <button class="btn btn-teal" onclick="loadHistory()"><i class="fas fa-search"></i> ค้นหา</button>
+          <button class="btn btn-gray" onclick="resetHistFilter()"><i class="fas fa-undo"></i> รีเซ็ต</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--blue)"><i class="fas fa-calendar-alt"></i></div>รายการลงเวลา</div><span id="histCount" style="font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:18px;border:1px solid var(--border-s)">0 รายการ</span></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th class="col-name admin-only" style="display:none">ชื่อ-สกุล</th><th class="col-dept admin-only" style="display:none">กลุ่ม</th><th>วันที่</th><th>เวลาเข้า</th><th>สถานะเข้า</th><th>สาย(นาที)</th><th>เวลาออก</th><th>สถานะออก</th><th>ภารกิจ</th><th>ไฟล์แนบ</th><th>รูป</th></tr></thead><tbody id="histBody"><tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i>ยังไม่มีข้อมูล</div></td></tr></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- ══ REPORT ════════════════════════════════════════ -->
+      <div id="page-report" class="page">
+        <div class="ph-left" style="margin-bottom:16px"><div class="ph-icon" style="background:linear-gradient(135deg,var(--purple),var(--red))"><i class="fas fa-file-alt"></i></div><div class="ph-text"><h2>รายงานทั้งหมด</h2><p>ตรวจสอบและวิเคราะห์ข้อมูลการลงเวลา</p></div></div>
+        <div class="filter-bar">
+          <div class="filter-group"><div class="filter-label">เจ้าหน้าที่</div><select class="filter-input" id="rptUser" style="min-width:140px"><option value="all">-- ทั้งหมด --</option></select></div>
+          <div class="filter-group"><div class="filter-label">ตั้งแต่วันที่</div><input type="date" class="filter-input" id="rptStart"></div>
+          <div class="filter-group"><div class="filter-label">ถึงวันที่</div><input type="date" class="filter-input" id="rptEnd"></div>
+          <div class="filter-group"><div class="filter-label">ค้นหาชื่อ</div><input type="text" class="filter-input" id="rptSearch" placeholder="ชื่อ..." style="min-width:120px"></div>
+          <button class="btn btn-teal" onclick="loadReport()"><i class="fas fa-search"></i> ค้นหา</button>
+          <button class="btn btn-purple" onclick="printReportTable()"><i class="fas fa-print"></i> พิมพ์ PDF</button>
+        </div>
+        <div class="report-stats">
+          <div class="rsc gc1"><div class="card-label"><i class="fas fa-list"></i> ทั้งหมด</div><div class="card-value" id="rpt-total">0</div></div>
+          <div class="rsc gc-blue"><div class="card-label"><i class="fas fa-check"></i> ตรงเวลา</div><div class="card-value" id="rpt-ontime">0</div></div>
+          <div class="rsc gc3"><div class="card-label"><i class="fas fa-clock"></i> มาสาย</div><div class="card-value" id="rpt-late">0</div></div>
+          <div class="rsc gc4"><div class="card-label"><i class="fas fa-hourglass-half"></i> ออกก่อน</div><div class="card-value" id="rpt-early">0</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--green-d)"><i class="fas fa-table"></i></div>รายงานการลงเวลาทั้งหมด</div><span id="rptCount" style="font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:18px;border:1px solid var(--border-s)">0 รายการ</span></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>วันที่</th><th>ชื่อ-สกุล</th><th>กลุ่ม</th><th>เวลาเข้า</th><th>สถานะ</th><th>สาย(น.)</th><th>เวลาออก</th><th>สถานะออก</th><th>ภารกิจ</th><th>ไฟล์แนบ</th><th>รูป</th></tr></thead><tbody id="reportBody"><tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i>กรุณาค้นหาข้อมูล</div></td></tr></tbody></table></div>
+          <div style="padding:14px 18px;border-top:1px solid rgba(174,198,207,.2);background:rgba(248,250,252,.5)"><div class="pagination" id="rptPagination"></div></div>
+        </div>
+      </div>
+
+      <!-- ══ MONTHLY REPORT ═══════════════════════════════ -->
+      <div id="page-monthlyReport" class="page">
+        <div class="page-header"><div class="ph-left"><div class="ph-icon" style="background:linear-gradient(135deg,#0277BD,var(--teal))"><i class="fas fa-chart-line"></i></div><div class="ph-text"><h2>รายงานรายเดือน</h2><p>สรุปการเข้างานรายบุคคลประจำเดือน</p></div></div></div>
+        <div class="filter-bar">
+          <div class="filter-group"><div class="filter-label">เดือน</div><input type="month" class="filter-input" id="mrMonth"></div>
+          <button class="btn btn-teal" onclick="loadMonthlyReport()"><i class="fas fa-search"></i> ดูรายงาน</button>
+          <button class="btn btn-purple" onclick="printMonthlyReport()"><i class="fas fa-print"></i> พิมพ์</button>
+        </div>
+        <div id="monthlyReportBody"><div class="empty-state"><i class="fas fa-calendar-alt" style="font-size:30px;opacity:.3;display:block;margin-bottom:8px"></i>เลือกเดือนแล้วกด "ดูรายงาน"</div></div>
+      </div>
+
+      <!-- ══ LEAVE ═════════════════════════════════════════ -->
+      <div id="page-leave" class="page">
+        <div class="page-header"><div class="ph-left"><div class="ph-icon" style="background:linear-gradient(135deg,var(--purple),#8a5aad)"><i class="fas fa-calendar-minus"></i></div><div class="ph-text"><h2>ขอลาหยุด</h2><p>ยื่นใบลาออนไลน์ และดูประวัติการลา</p></div></div><button class="btn btn-purple" onclick="showModal('leaveModal')"><i class="fas fa-plus"></i> ยื่นใบลา</button></div>
+        <div style="margin-bottom:18px"><div class="panel"><div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--purple)"><i class="fas fa-umbrella-beach"></i></div>โควต้าการลาประจำปี</div><span style="font-size:11px;color:var(--text3)">ปี <span id="leaveYear">----</span></span></div><div class="panel-body"><div class="leave-type-grid" id="leaveQuotaGrid"></div></div></div></div>
+        <div class="panel"><div class="panel-head"><div class="panel-title"><div class="panel-icon" style="background:var(--blue)"><i class="fas fa-list"></i></div>ประวัติการลา</div></div><div id="leaveHistoryBody" style="padding:16px 18px"><div class="empty-state"><i class="fas fa-inbox"></i>ยังไม่มีประวัติการลา</div></div></div>
+      </div>
+
+      <!-- ══ USERS ═════════════════════════════════════════ -->
+      <div id="page-users" class="page">
+        <div class="page-header"><div class="ph-left"><div class="ph-icon" style="background:linear-gradient(135deg,var(--yellow),var(--orange-d))"><i class="fas fa-users-cog"></i></div><div class="ph-text"><h2>จัดการผู้ใช้งาน</h2><p>เพิ่ม แก้ไข และลบข้อมูลเจ้าหน้าที่</p></div></div><button class="btn btn-teal" onclick="showAddUser()"><i class="fas fa-plus"></i> เพิ่มเจ้าหน้าที่</button></div>
+        <div class="users-grid" id="usersGrid"><div class="empty-state" style="grid-column:1/-1"><i class="fas fa-spinner fa-spin"></i>กำลังโหลด...</div></div>
+      </div>
+
+    </div><!-- /page-content -->
+  </main>
+</div><!-- /appLayout -->
+
+<!-- ══ MODALS ════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="userModalTitle">เพิ่มเจ้าหน้าที่</div><button class="icon-btn" onclick="closeModal('userModal')"><i class="fas fa-times"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editUid">
+      <div class="form-row" style="margin-bottom:12px">
+        <div><label class="form-label">ชื่อ-สกุล *</label><input class="form-input" id="uName" type="text"></div>
+        <div><label class="form-label">กลุ่ม</label><input class="form-input" id="uDept" type="text"></div>
+        <div><label class="form-label">ตำแหน่ง</label><input class="form-input" id="uPos" type="text"></div>
+        <div><label class="form-label">อีเมล *</label><input class="form-input" id="uEmail" type="email"></div>
+        <div><label class="form-label">รหัสผ่าน</label><input class="form-input" id="uPass" type="text"></div>
+        <div><label class="form-label">บทบาท</label><select class="form-select" id="uRole"><option value="user">เจ้าหน้าที่</option><option value="admin">ผู้ดูแล</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-gray" onclick="closeModal('userModal')">ยกเลิก</button><button class="btn btn-teal" onclick="saveUser()"><i class="fas fa-save"></i> บันทึก</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="imgModal">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-head"><div class="modal-title" id="imgModalTitle">รูปภาพ</div><button class="icon-btn" onclick="closeModal('imgModal')"><i class="fas fa-times"></i></button></div>
+    <div class="img-modal-body" id="imgModalBody"></div>
+    <div class="img-modal-actions"><a id="imgModalLink" href="#" target="_blank" class="btn btn-teal btn-sm" style="text-decoration:none"><i class="fas fa-external-link-alt"></i> เปิดใน Drive</a><button class="btn btn-gray btn-sm" onclick="closeModal('imgModal')">ปิด</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pdfModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head"><div class="modal-title"><i class="fas fa-file-pdf" style="color:var(--red)"></i> พิมพ์รายงานประจำวัน</div><button class="icon-btn" onclick="closeModal('pdfModal')"><i class="fas fa-times"></i></button></div>
+    <div class="modal-body">
+      <div class="filter-bar" style="margin-bottom:14px"><div class="filter-group"><div class="filter-label">วันที่</div><input type="date" class="filter-input" id="pdfDate"></div><button class="btn btn-teal" onclick="loadDailyPdfPreview()"><i class="fas fa-search"></i> โหลดข้อมูล</button></div>
+      <div id="pdfPreview" style="display:none">
+        <div style="background:var(--bg3);border:1.5px solid var(--border-s);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px"><i class="fas fa-pen-nib" style="color:var(--purple)"></i> ผู้ลงนามรับรอง</div>
+          <div class="form-row" style="gap:10px">
+            <div><label class="form-label">ผู้ตรวจสอบ</label><input class="form-input" id="signerName1" placeholder="ชื่อ-สกุล" style="font-size:13px;padding:8px 10px"><input class="form-input" id="signerPos1" placeholder="ตำแหน่ง" style="font-size:13px;padding:8px 10px;margin-top:6px"></div>
+            <div><label class="form-label">ผู้อนุมัติ</label><input class="form-input" id="signerName2" placeholder="ชื่อ-สกุล" style="font-size:13px;padding:8px 10px"><input class="form-input" id="signerPos2" placeholder="ตำแหน่ง" style="font-size:13px;padding:8px 10px;margin-top:6px"></div>
+          </div>
+        </div>
+        <div id="pdfPreviewContent" style="background:white;border:1px solid var(--border-s);border-radius:8px;padding:20px;font-family:'Sarabun',sans-serif;font-size:12px;color:#333;max-height:380px;overflow-y:auto"></div>
+      </div>
+      <div id="pdfEmpty" style="text-align:center;padding:24px;color:var(--text3);display:none"><i class="fas fa-inbox" style="font-size:28px;opacity:.3;display:block;margin-bottom:8px"></i>ไม่พบข้อมูลในวันที่เลือก</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-gray" onclick="closeModal('pdfModal')">ปิด</button><button class="btn btn-purple" id="btnDoPrint" onclick="doPrintPdf()" style="display:none"><i class="fas fa-print"></i> พิมพ์ / บันทึก PDF</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="leaveModal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><div class="modal-title"><i class="fas fa-calendar-minus" style="color:var(--purple)"></i> ยื่นใบลา</div><button class="icon-btn" onclick="closeModal('leaveModal')"><i class="fas fa-times"></i></button></div>
+    <div class="modal-body">
+      <div class="fmb"><label class="form-label">ประเภทการลา *</label><select class="form-select" id="leaveTypeSelect"><option value="ลาป่วย">🏥 ลาป่วย</option><option value="ลากิจ">📋 ลากิจ</option><option value="ลาพักร้อน">🌴 ลาพักร้อน</option><option value="ลาคลอด">👶 ลาคลอด</option><option value="ลาบวช">🙏 ลาบวช</option></select></div>
+      <div class="form-row fmb"><div><label class="form-label">วันที่เริ่มลา *</label><input class="form-input" id="leaveStartDate" type="date"></div><div><label class="form-label">วันที่สิ้นสุด *</label><input class="form-input" id="leaveEndDate" type="date"></div></div>
+      <div class="fmb"><label class="form-label">จำนวนวันลา</label><div style="background:var(--bg3);border:1.5px solid var(--border-s);border-radius:9px;padding:10px 14px;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--teal)" id="leaveDaysCalc">0 วัน</div></div>
+      <div class="fmb"><label class="form-label">เหตุผลการลา *</label><textarea class="form-textarea" id="leaveReason" placeholder="ระบุเหตุผล..."></textarea></div>
+      <div class="fmb"><label class="form-label"><i class="bx bx-transfer" style="color:var(--teal)"></i> ผู้รับมอบหมายงาน</label><input class="form-input" id="leaveDelegate" type="text" placeholder="ชื่อผู้รับมอบหมาย (ถ้ามี)" style="margin-bottom:8px"><input class="form-input" id="leaveDelegateEmail" type="email" placeholder="อีเมลผู้รับมอบหมาย"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-gray" onclick="closeModal('leaveModal')">ยกเลิก</button><button class="btn btn-purple" onclick="submitLeave()"><i class="fas fa-paper-plane"></i> ส่งใบลา</button></div>
+  </div>
+</div>
+
+<!-- ══ SCRIPTS ════════════════════════════════════════════════ -->
+<script src="js/camera.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
