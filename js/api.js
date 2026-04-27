@@ -1,4 +1,4 @@
-<script>
+
   /**
  * api.js — WFH System API Layer
  * ──────────────────────────────
@@ -111,4 +111,4 @@ const API = (() => {
   /* ─── Public ─────────────────────────────────────────────── */
   return { auth, system, attendance, dashboard, users, leave, files, invalidate, clearAll };
 })();
-</script>
+
